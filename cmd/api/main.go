@@ -1,28 +1,29 @@
 package main
 
 import (
+	"context"
+	"github/thomasfurland/go-simple-webservice/internal/handlers"
+	"github/thomasfurland/go-simple-webservice/internal/httpserver"
 	"log"
-	"net"
-	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
-func main() {
-	mux := http.NewServeMux()
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
-	}
+const Port = ":8080"
 
-	listener, err := net.Listen("tcp", server.Addr)
-	if err != nil {
+func main() {
+	mux := handlers.New()
+	server := httpserver.New(Port, mux, httpserver.Options{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	})
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	if err := httpserver.Run(ctx, server); err != nil {
 		log.Fatal(err)
 	}
-
-	mux.HandleFunc("/", homeHandler)
-
-	log.Fatal(server.Serve(listener))
-}
-
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("hello world!"))
 }
