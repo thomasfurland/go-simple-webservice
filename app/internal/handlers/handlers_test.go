@@ -23,7 +23,7 @@ func TestHomeHandler(t *testing.T) {
 
 	body := w.Body.String()
 
-	text := "hello world!"
+	text := "hello world!!"
 
 	if body != "hello world!" {
 		t.Fatalf("expected '%q', got %q", text, body)
