@@ -24,3 +24,8 @@ Thumbs.db
 
 # Dependency cache (let go.mod handle it)
 vendor/
+
+# Environment Variables
+*.env
+.env
+.env.*

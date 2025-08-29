@@ -19,7 +19,7 @@ jobs:
           docker compose up -d db
           docker compose exec -T db bash -c "until pg_isready -U postgres -d postgres; do sleep 2; done"
 
-      - run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+      - run: go test -race -covermode=atomic -coverprofile=coverage.out ./... -v
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
