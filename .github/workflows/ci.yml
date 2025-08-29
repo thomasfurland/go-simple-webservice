@@ -1,15 +1,33 @@
 name: CI
 on: [pull_request, workflow_dispatch]
+
 jobs:
   test:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: app } }
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version-file: app/go.mod, cache: true }
+
       - run: go vet ./...
+
+      - name: Start Postgres
+        working-directory: .
+        run: |
+          docker compose up -d db
+          docker compose exec -T db bash -c "until pg_isready -U postgres -d postgres; do sleep 2; done"
+
       - run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: coverage, path: app/coverage.out }
+
+      - name: Stop services
+        if: always()
+        working-directory: .
+        run: docker compose down -v
