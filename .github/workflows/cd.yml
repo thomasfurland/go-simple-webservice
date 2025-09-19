@@ -1,0 +1,73 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options: [staging, prod]
+        default: staging
+      image_tag:
+        description: "Image tag to deploy (default: latest SHA on main)"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: true
+
+env:
+  REGION:        ${{ vars.GCP_REGION }}
+  PROJECT_ID:    ${{ vars.GCP_PROJECT_ID }}
+  CLUSTER:       ${{ vars.GKE_CLUSTER_NAME }}
+  NAMESPACE:     simple-web
+  IMAGE_REPO:    ${{ vars.IMAGE_REPO }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag != '' && inputs.image_tag || github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set IMAGE env
+        run: echo "IMAGE=${IMAGE_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "$PROJECT_ID"
+
+      # Bootstrap safely on every run (idempotent)
+      - name: Ensure namespace
+        run: kubectl get ns "$NAMESPACE" || kubectl create ns "$NAMESPACE"
+
+      - name: Apply base K8s
+        run: |
+          kubectl apply -f k8s/app/service.yaml
+          kubectl apply -f k8s/app/deployment.yaml
+
+      - name: Sync Secret (DATABASE_URL from environment secrets)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          kubectl -n "$NAMESPACE" create secret generic app-secrets \
+            --from-literal=DATABASE_URL="$DATABASE_URL" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Set image & rollout
+        run: |
+          kubectl -n "$NAMESPACE" set image deploy/app app="$IMAGE"
+          kubectl -n "$NAMESPACE" rollout status deploy/app --timeout=120s
