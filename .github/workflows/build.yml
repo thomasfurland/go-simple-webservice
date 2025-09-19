@@ -1,0 +1,39 @@
+name: Build
+on:
+  push:
+    branches: [ main ]
+    paths: ['app/**','.github/workflows/build.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION:        ${{ vars.GCP_REGION }}
+  PROJECT_ID:    ${{ vars.GCP_PROJECT_ID }}
+  IMAGE_REPO:    ${{ vars.IMAGE_REPO }}
+  IMAGE_TAG:     ${{ github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set IMAGE env
+        run: echo "IMAGE=${IMAGE_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
+      - name: Build & push
+        run: |
+          docker build -t "$IMAGE" ./app
+          docker push "$IMAGE"
+      - name: Output image
+        run: echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
