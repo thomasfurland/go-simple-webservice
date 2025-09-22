@@ -17,4 +17,10 @@ jobs:
           credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
       - uses: hashicorp/setup-terraform@v3
       - run: terraform -chdir=infra/terraform init
-      - run: terraform -chdir=infra/terraform apply -auto-approve
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: terraform apply -auto-approve -input=false
