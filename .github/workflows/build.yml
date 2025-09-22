@@ -4,6 +4,7 @@ on:
     branches: [ main ]
     paths: ['app/**','.github/workflows/build.yml']
   workflow_dispatch:
+  pull_request:
 
 permissions:
   contents: read
@@ -26,8 +27,7 @@ jobs:
 
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
       - uses: google-github-actions/setup-gcloud@v2
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
