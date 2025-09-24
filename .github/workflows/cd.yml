@@ -11,6 +11,7 @@ on:
       image_tag:
         description: "Image tag to deploy (default: latest SHA on main)"
         required: false
+  pull_request:
 
 permissions:
   contents: read
@@ -26,6 +27,7 @@ env:
   CLUSTER:       ${{ vars.GKE_CLUSTER_NAME }}
   NAMESPACE:     simple-web
   IMAGE_REPO:    ${{ vars.IMAGE_REPO }}
+  IMAGE_NAME:    ${{ vars.IMAGE_NAME}}
 
 jobs:
   deploy:
@@ -38,21 +40,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set IMAGE env
-        run: echo "IMAGE=${IMAGE_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+        run: echo "IMAGE=${IMAGE_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" >> "$GITHUB_ENV"
 
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Get GKE credentials
         run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "$PROJECT_ID"
-
-      # Bootstrap safely on every run (idempotent)
-      - name: Ensure namespace
-        run: kubectl get ns "$NAMESPACE" || kubectl create ns "$NAMESPACE"
 
       - name: Apply base K8s
         run: |
