@@ -47,9 +47,13 @@ jobs:
           credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
 
       - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'kubectl,gke-gcloud-auth-plugin'
 
-      - name: Use GKE gcloud auth plugin
-        run: echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+      - name: Verify plugin is installed
+        run: |
+          which kubectl
+          which gke-gcloud-auth-plugin
 
       - name: Get GKE credentials
         run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "$PROJECT_ID"
