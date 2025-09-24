@@ -11,7 +11,6 @@ on:
       image_tag:
         description: "Image tag to deploy (default: latest SHA on main)"
         required: false
-  pull_request:
 
 permissions:
   contents: read
