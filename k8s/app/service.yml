@@ -4,9 +4,9 @@ metadata:
   name: app
   namespace: simple-web
 spec:
+  type: LoadBalancer
   selector:
     app: app
   ports:
   - port: 80
     targetPort: 8080
-  type: ClusterIP
