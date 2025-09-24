@@ -53,8 +53,8 @@ jobs:
 
       - name: Apply base K8s
         run: |
-          kubectl apply -f k8s/app/service.yaml
-          kubectl apply -f k8s/app/deployment.yaml
+          kubectl apply -f k8s/app/service.yml
+          kubectl apply -f k8s/app/deployment.yml
 
       - name: Sync Secret (DATABASE_URL from environment secrets)
         env:
