@@ -11,7 +11,6 @@ on:
       image_tag:
         description: "Image tag to deploy (default: latest SHA on main)"
         required: false
-  pull_request:
 
 permissions:
   contents: read
@@ -74,4 +73,4 @@ jobs:
       - name: Set image & rollout
         run: |
           kubectl -n "$NAMESPACE" set image deploy/app app="$IMAGE"
-          kubectl -n "$NAMESPACE" rollout status deploy/app --timeout=120s
+          kubectl -n "$NAMESPACE" rollout status deploy/app --timeout=180s
