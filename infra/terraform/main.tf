@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -13,10 +17,26 @@ provider "google" {
   region  = var.region
 }
 
+data "google_client_config" "default" {}
+
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.simple_web.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(
+    google_container_cluster.simple_web.master_auth[0].cluster_ca_certificate
+  )
+}
+
 resource "google_container_cluster" "simple_web" {
-  name     = "simple-web"
-  location = var.region
+  name            = "simple-web"
+  location        = var.region
   enable_autopilot = true
+}
+
+resource "kubernetes_namespace" "simple_web" {
+  metadata {
+    name = "simple-web"
+  }
 }
 
 resource "google_sql_database_instance" "postgres" {
