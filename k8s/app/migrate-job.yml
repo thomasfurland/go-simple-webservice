@@ -11,7 +11,7 @@ spec:
       containers:
         - name: app
           image: invalid:to-be-overwritten
-          command: ["app/migrate"]
+          command: ["/app/migrate"]
           env:
             - name: DATABASE_URL
               valueFrom:

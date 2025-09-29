@@ -81,5 +81,10 @@ jobs:
         run: |
           kubectl -n "$NAMESPACE" delete job migrate --ignore-not-found
           sed "s|invalid:to-be-overwritten|$IMAGE|g" k8s/app/migrate-job.yml | kubectl apply -f -
-          kubectl -n "$NAMESPACE" wait --for=condition=complete job/migrate --timeout=300s
-          kubectl -n "$NAMESPACE" logs job/migrate -c app
+          kubectl -n "$NAMESPACE" wait --for=condition=Ready pod -l job-name=migrate --timeout=60s
+          kubectl -n "$NAMESPACE" logs -f job/migrate -c app  | tee migrate.log
+
+          if grep -q '^MIGRATION FAILURE:' migrate.log; then
+            echo "::error::Migration error (found MIGRATION FAILURE)"
+            exit 1
+          fi
