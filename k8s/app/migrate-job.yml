@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: simple-web
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: app
+          image: invalid:to-be-overwritten
+          command: ["goose"]
+          args: ["-dir", "/app/migrations", "up"]
+          env:
+            - name: GOOSE_DRIVER
+              value: postgres
+            - name: GOOSE_DBSTRING
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL
+          envFrom:
+            - secretRef: { name: app-secrets }
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+          args: ["--port=5432","--address=0.0.0.0","$(INSTANCE_CONNECTION_NAME)"]
+          env:
+            - name: INSTANCE_CONNECTION_NAME
+              valueFrom: { secretKeyRef: { name: app-secrets, key: INSTANCE_CONNECTION_NAME } }
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /secrets/credentials.json
+          volumeMounts:
+            - name: cloudsql-sa
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: cloudsql-sa
+          secret: { secretName: cloud-sql-credentials }

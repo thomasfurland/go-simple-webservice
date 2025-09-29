@@ -19,7 +19,18 @@ jobs:
           docker compose up -d db
           docker compose exec -T db bash -c "until pg_isready -U postgres -d postgres; do sleep 2; done"
 
-      - run: go test -race -covermode=atomic -coverprofile=coverage.out ./... -v
+      - name: Install goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Run DB migrations
+        env:
+          GOOSE_DRIVER: postgres
+          GOOSE_DBSTRING: ${{ secrets.DATABASE_URL }}
+        run: |
+          "$(go env GOPATH)/bin/goose" -dir ./migrations up
+
+      - name: Run Tests
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./... -v
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
