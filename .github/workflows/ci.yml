@@ -27,7 +27,7 @@ jobs:
           GOOSE_DRIVER: postgres
           GOOSE_DBSTRING: ${{ secrets.DATABASE_URL }}
         run: |
-          "$(go env GOPATH)/bin/goose" -dir ./app/migrations up
+          "$(go env GOPATH)/bin/goose" -dir ./migrations up
 
       - name: Run Tests
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./... -v
