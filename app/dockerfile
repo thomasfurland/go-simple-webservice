@@ -5,8 +5,14 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/api
 
+# add migrations
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.21.1
+RUN mkdir -p /out/migrations && cp -R ./migrations /out/
+
 FROM gcr.io/distroless/base-debian12
 WORKDIR /app
 COPY --from=build /out/server /app/server
+COPY --from=build /out/migrations /app/migrations
+COPY --from=build /go/bin/goose /usr/local/bin/goose
 EXPOSE 8080
 CMD ["/app/server"]

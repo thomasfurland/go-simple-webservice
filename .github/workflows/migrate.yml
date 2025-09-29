@@ -1,0 +1,85 @@
+name: Migrate
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [staging, prod]
+        default: prod
+      image_tag:
+        description: "Image tag to run migrations with (defaults to latest SHA)"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: migrate-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  REGION:        ${{ vars.GCP_REGION }}
+  PROJECT_ID:    ${{ vars.GCP_PROJECT_ID }}
+  CLUSTER:       ${{ vars.GKE_CLUSTER_NAME }}
+  NAMESPACE:     simple-web
+  IMAGE_REPO:    ${{ vars.IMAGE_REPO }}
+  IMAGE_NAME:    ${{ vars.IMAGE_NAME}}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag != '' && inputs.image_tag || github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set IMAGE env
+        run: echo "IMAGE=${IMAGE_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_JSON }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: kubectl,gke-gcloud-auth-plugin
+
+      - name: Get GKE credentials
+        run: gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --project "$PROJECT_ID"
+
+      # show current context/namespace
+      - name: kubectl context
+        run: |
+          kubectl config current-context
+          kubectl get ns
+
+      - name: Sync Secret (DATABASE_URL from environment secrets)
+        env:
+          DATABASE_PASSWORD: ${{ secrets.PROD_DATABASE_PASSWORD }}
+          INSTANCE_CONNECTION_NAME: ${{ vars.INSTANCE_CONNECTION_NAME }}
+        run: |
+          kubectl -n "$NAMESPACE" create secret generic app-secrets \
+            --from-literal=DATABASE_URL="postgres://appuser:${DATABASE_PASSWORD}@127.0.0.1:5432/appdb?sslmode=disable" \
+            --from-literal=INSTANCE_CONNECTION_NAME="${INSTANCE_CONNECTION_NAME}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync Cloud SQL credentials
+        env:
+          GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
+        run: |
+          printf '%s' "$GCP_CREDENTIALS_JSON" > sa.json
+          kubectl -n "$NAMESPACE" create secret generic cloud-sql-credentials \
+            --from-file=credentials.json=sa.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm -f sa.json
+
+      - name: Run migrations
+        run: |
+          kubectl -n "$NAMESPACE" delete job migrate --ignore-not-found
+          sed "s|invalid:to-be-overwritten|$IMAGE|g" k8s/app/migrate-job.yaml | kubectl apply -f -
+          kubectl -n "$NAMESPACE" wait --for=condition=complete job/migrate --timeout=300s
+          kubectl -n "$NAMESPACE" logs job/migrate -c app
