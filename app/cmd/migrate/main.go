@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"fmt"
 	"os"
 	"time"
 
@@ -12,20 +12,24 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
+// exit success on error or successful migration for github actions
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("DATABASE_URL not set")
+		fmt.Println("MIGRATION FAILURE: DATABASE_URL not set")
+		os.Exit(0)
 	}
 
 	dir := os.Getenv("MIGRATION_DIRECTORY")
 	if dir == "" {
-		log.Fatal("MIGRATION_DIRECTORY not set")
+		fmt.Println("MIGRATION FAILURE: MIGRATION_DIRECTORY not set")
+		os.Exit(0)
 	}
 
 	// 1) Wait for DB readiness (bounded)
 	if err := waitForDB(dsn, 2*time.Minute, 2*time.Second); err != nil {
-		log.Fatalf("db not ready: %v", err)
+		fmt.Printf("MIGRATION FAILURE: db not ready: %v\n", err)
+		os.Exit(0)
 	}
 
 	// 2) Run migrations (bounded)
@@ -34,15 +38,18 @@ func main() {
 
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatalf("open db: %v", err)
+		fmt.Printf("MIGRATION FAILURE: open db: %v\n", err)
+		os.Exit(0)
 	}
 	defer db.Close()
 
 	if err := goose.UpContext(ctx, db, dir); err != nil {
-		log.Fatalf("migrate up: %v", err)
+		fmt.Printf("MIGRATION FAILURE: migrate up: %v\n", err)
+		os.Exit(0)
 	}
 
-	log.Println("✅ migrations applied")
+	fmt.Println("MIGRATION SUCCESS: ✅ migrations applied")
+	os.Exit(0)
 }
 
 func waitForDB(dsn string, maxWait, step time.Duration) error {

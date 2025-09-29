@@ -4,6 +4,7 @@ on:
     branches: [ main ]
     paths: ['app/**','.github/workflows/build.yml']
   workflow_dispatch:
+  pull_request:
 
 permissions:
   contents: read
