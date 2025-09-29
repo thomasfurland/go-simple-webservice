@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     env:
-      IMAGE_TAG: 795c5f01dca1064afba0aaf1b284dc0f7f8b691b
+      IMAGE_TAG: 1a1f9c944edac675a562319a34e1bd23560ea13a
       # IMAGE_TAG: ${{ inputs.image_tag != '' && inputs.image_tag || github.sha }}
 
     steps:
@@ -83,4 +83,5 @@ jobs:
         run: |
           kubectl -n "$NAMESPACE" delete job migrate --ignore-not-found
           sed "s|invalid:to-be-overwritten|$IMAGE|g" k8s/app/migrate-job.yml | kubectl apply -f -
+          kubectl -n "$NAMESPACE" wait --for=condition=Ready pod -l job-name=migrate --timeout=60s
           kubectl -n "$NAMESPACE" logs -f job/migrate -c app
