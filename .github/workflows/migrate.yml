@@ -11,6 +11,7 @@ on:
       image_tag:
         description: "Image tag to run migrations with (defaults to latest SHA)"
         required: false
+        default: 34aa09383429d089e30466841cb171dc06796024
 
 permissions:
   contents: read
