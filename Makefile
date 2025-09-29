@@ -1,4 +1,4 @@
-.PHONY: test up down logs
+.PHONY: test up down logs migrate-up
 
 # Load env vars from test.env if it exists
 ENVFILE := .env.test
@@ -19,3 +19,12 @@ down:
 # Tail logs for db
 logs:
 	docker compose logs -f db
+
+migrate-up:
+	$(ENV) goose -dir ./app/migrations postgres up
+
+migrate-down:
+	$(ENV) goose -dir ./app/migrations postgres down
+
+migrate-status:
+	$(ENV) goose -dir ./app/migrations postgres status
