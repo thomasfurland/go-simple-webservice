@@ -31,6 +31,7 @@ resource "google_container_cluster" "simple_web" {
   name            = "simple-web"
   location        = var.region
   enable_autopilot = true
+  deletion_protection = false # we tear down after done for the day.
 }
 
 resource "kubernetes_namespace" "simple_web" {
@@ -48,7 +49,7 @@ resource "google_sql_database_instance" "postgres" {
     tier = "db-f1-micro"
   }
 
-  deletion_protection = false
+  deletion_protection = false  # we tear down after done for the day.
 }
 
 resource "google_sql_database" "default" {
