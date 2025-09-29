@@ -4,23 +4,22 @@ metadata:
   name: migrate
   namespace: simple-web
 spec:
-  backoffLimit: 6
+  backoffLimit: 0
   template:
     spec:
-      restartPolicy: OnFailure
+      restartPolicy: Never
       containers:
         - name: app
           image: invalid:to-be-overwritten
-          command: ["goose"]
-          args: ["-dir", "/app/migrations", "up"]
+          command: ["app/migrate"]
           env:
-            - name: GOOSE_DRIVER
-              value: postgres
-            - name: GOOSE_DBSTRING
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
                   key: DATABASE_URL
+            - name: MIGRATION_DIRECTORY
+              value: /app/migrations
           envFrom:
             - secretRef: { name: app-secrets }
           resources:

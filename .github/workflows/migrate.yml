@@ -1,6 +1,5 @@
 name: Migrate
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       environment:
@@ -33,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     env:
-      IMAGE_TAG: 34aa09383429d089e30466841cb171dc06796024
+      IMAGE_TAG: ${{ inputs.image_tag != '' && inputs.image_tag || github.sha }}
 
     steps:
       - uses: actions/checkout@v4
