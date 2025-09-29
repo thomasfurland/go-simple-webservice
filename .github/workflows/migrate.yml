@@ -80,6 +80,6 @@ jobs:
       - name: Run migrations
         run: |
           kubectl -n "$NAMESPACE" delete job migrate --ignore-not-found
-          sed "s|invalid:to-be-overwritten|$IMAGE|g" k8s/app/migrate-job.yaml | kubectl apply -f -
+          sed "s|invalid:to-be-overwritten|$IMAGE|g" k8s/app/migrate-job.yml | kubectl apply -f -
           kubectl -n "$NAMESPACE" wait --for=condition=complete job/migrate --timeout=300s
           kubectl -n "$NAMESPACE" logs job/migrate -c app

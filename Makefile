@@ -21,10 +21,11 @@ logs:
 	docker compose logs -f db
 
 migrate-up:
-	$(ENV) goose -dir ./app/migrations postgres up
+	$(ENV) go -C app run ./cmd/migrate
 
 migrate-down:
 	$(ENV) goose -dir ./app/migrations postgres down
 
 migrate-status:
 	$(ENV) goose -dir ./app/migrations postgres status
+
