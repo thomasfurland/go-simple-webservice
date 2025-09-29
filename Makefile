@@ -1,4 +1,4 @@
-.PHONY: test up down logs migrate-up
+.PHONY: test up down logs migrate-up migrate-down migrate-status
 
 # Load env vars from test.env if it exists
 ENVFILE := .env.test
